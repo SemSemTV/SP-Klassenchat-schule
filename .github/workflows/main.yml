@@ -1,0 +1,46 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Repository herunterladen
+        uses: actions/checkout@v4
+
+      - name: Node.js installieren
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Capacitor iOS synchronisieren
+        run: npx cap sync ios
+
+      - name: Xcode Build
+        run: |
+          cd ios/App
+          xcodebuild \
+            -project App.xcodeproj \
+            -scheme App \
+            -sdk iphoneos \
+            -configuration Debug \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: IPA erstellen
+        run: |
+          mkdir -p Payload
+          cp -R ios/App/build/Build/Products/Debug-iphoneos/App.app Payload/
+          zip -r SP-Klassenchat.ipa Payload
+
+      - name: IPA hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          name: SP-Klassenchat-IPA
+          path: SP-Klassenchat.ipa
